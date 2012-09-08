@@ -1,0 +1,12 @@
+{application, ads,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ads_app, []}},
+  {env, []}
+ ]}.
