@@ -4,7 +4,7 @@
 -include("../include/ads.hrl").
 
 % API
--export([handle/1]).
+-export([handle/2]).
 
 
 %% ===================================================================
@@ -19,7 +19,7 @@ page_not_found(Req)->
 %% ===================================================================
 
 % Handle HTTP request
-handle(Req) ->
+handle(Req, C) ->
   % get params depending on method
   Method = Req:get(method),
   case Method of
@@ -29,14 +29,48 @@ handle(Req) ->
       Args = Req:parse_post()
   end,
   % Handle request by parameters
-  handle(Req:get(method), Req:resource([lowercase, urldecode]), Args, Req).
+  handle(Req:get(method), Req:resource([lowercase, urldecode]), Args, Req, C).
 
-  
+%% ===================================================================
+%% Build Responces 
+%% Respone body types: [application/json, plain/html].
+%% ===================================================================
+
+build_adjson(Key)->
+	{H, M, S} = time(),
+	T = io_lib:format('~2..0b:~2..0b:~2..0b', [H, M, S]),
+	E = [{"Extra","Parameters"}, {"Value","EVALUE"}, {"Key", Key}, {"Time", T}],
+	N = [{"Networks","Parameters"}, {"Value","NVALUE"}, {"Key", Key}, {"Time", T}],
+	IN = [{"Networks","Parameters"}, {"Value","INVALUE"}, {"Key", Key}, {"Time", T}],
+	BuildJSON = fun({Param, Value}, Acc) ->
+		[lists:flatten(io_lib:format("{\"~s\":\"~s\"},\n", [Param, Value])) | Acc]
+	end,
+	EJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], E))),
+	NJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], N))),
+	INJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], IN))),
+	EJ ++ NJ ++ INJ.
+
 %% ===================================================================
 %% Handle GET requests with URI type of '/ad/**'
 %% Respone body types: [application/json, plain/html].
 %% ===================================================================
 
+handle_adtest(Args, Req, C)->
+  K = ads_util:generate_key(Args),
+  ?LOG_DEBUG("K=~s", K),
+  R = ads_data:get(K, C),
+  {ok, V} = R,
+  if   
+	undefined == V ->
+		NV = build_adjson(K),
+		?LOG_DEBUG("NewValue=~s", NV),
+		ads_data:put(K, NV, C),
+		Req:ok([{"Content-Type", "application/json"}], NV);
+	true->	
+		?LOG_DEBUG("CACHE=~s", V),
+		Req:ok([{"Content-Type", "application/json"}], V)
+  end.
+  
 handle_adjson(Args, Req)->
   % prepare JSON
   BuildJSON = fun({Param, Value}, Acc) ->
@@ -66,10 +100,11 @@ handle_adhtml(Args, Req) ->
   </body>
   </html>", [Xml]).
     
-handle('GET', ["ad", RespType], Args, Req)->
+handle('GET', ["ad", RespType], Args, Req, C)->
 case RespType of
   "json" -> handle_adjson(Args, Req);
   "html" -> handle_adhtml(Args, Req);
+  "test" -> handle_adtest(Args, Req, C);
   _ -> page_not_found(Req)
 end;
 
@@ -80,10 +115,10 @@ end;
 %% ===================================================================
 
 %todo: Need to implemented cases from the list above
-handle('GET', ["report", RespType], Args, Req)->
-case RespType of
-  _ -> page_not_found(Req)
-end;
+%handle('GET', ["report", RespType], Args, Req)->
+%case RespType of
+%  _ -> page_not_found(Req)
+%end;
 
 
 %% ===================================================================
@@ -92,16 +127,16 @@ end;
 %% ===================================================================
 
 %todo: Need to implemented cases from the list above
-handle('GET', ["stat", RespType], Args, Req)->
-case RespType of
-  _ -> page_not_found(Req)
-end;
+%handle('GET', ["stat", RespType], Args, Req)->
+%case RespType of
+%  _ -> page_not_found(Req)
+%end;
 
 	
 %% ===================================================================
 %% Handle any other requests
 %% =================================================================== 
 
-handle(_, _, _, Req) ->
+handle(_, _, _, Req, _) ->
   page_not_found(Req).
   

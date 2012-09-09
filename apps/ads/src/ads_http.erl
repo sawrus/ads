@@ -1,4 +1,4 @@
--module(ads_sup).
+-module(ads_http).
 
 % API
 -export([start/1, stop/0]).
@@ -9,7 +9,8 @@
 
 % Start <M> HTTP server
 start(Port) ->
-  misultin:start_link([{port, Port}, {loop, fun(Req) -> ads_req:handle(Req) end}]).
+  C = ads_data:start(),
+  misultin:start_link([{port, Port}, {loop, fun(Req) -> ads_req:handle(Req, C) end}]).
 
 % Stop <M> HTTP server
 stop() ->

@@ -8,5 +8,13 @@
                   stdlib
                  ]},
   {mod, { ads_app, []}},
-  {env, []}
+  {modules, [
+	ads_req,
+	ads_http,
+	ads_util,
+	ads_test,
+	ads_sup,
+	ads_app
+  ]},
+  {env, [{http_port, 7777}]}
  ]}.
