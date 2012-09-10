@@ -10,11 +10,15 @@
   {mod, { ads_app, []}},
   {modules, [
 	ads_req,
+	ads_data,
 	ads_http,
 	ads_util,
 	ads_test,
 	ads_sup,
 	ads_app
   ]},
-  {env, [{http_port, 7777}]}
+  {env, [
+	{http_port, 7777},
+	{http_folder, "/d/ads"}
+   ]}
  ]}.

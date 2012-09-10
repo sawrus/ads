@@ -19,7 +19,7 @@ page_not_found(Req)->
 %% ===================================================================
 
 % Handle HTTP request
-handle(Req, C) ->
+handle(Req, Conn) ->
   % get params depending on method
   Method = Req:get(method),
   case Method of
@@ -29,7 +29,7 @@ handle(Req, C) ->
       Args = Req:parse_post()
   end,
   % Handle request by parameters
-  handle(Req:get(method), Req:resource([lowercase, urldecode]), Args, Req, C).
+  handle(Req:get(method), Req:resource([lowercase, urldecode]), Args, Req, Conn).
 
 %% ===================================================================
 %% Build Responces 
@@ -55,20 +55,16 @@ build_adjson(Key)->
 %% Respone body types: [application/json, plain/html].
 %% ===================================================================
 
-handle_adtest(Args, Req, C)->
-  K = ads_util:generate_key(Args),
-  ?LOG_DEBUG("K=~s", K),
-  R = ads_data:get(K, C),
-  {ok, V} = R,
+handle_adtest(Args, Req, Conn)->
+  Key = ads_util:genkey(Args),
+  {ok, Value} = ads_data:get(Key, Conn),
   if   
-	undefined == V ->
-		NV = build_adjson(K),
-		?LOG_DEBUG("NewValue=~s", NV),
-		ads_data:put(K, NV, C),
-		Req:ok([{"Content-Type", "application/json"}], NV);
+	undefined == Value ->
+		NewValue = build_adjson(Key),
+		ads_data:put(Key, NewValue, Conn),
+		Req:ok([{"Content-Type", "application/json"}], NewValue);
 	true->	
-		?LOG_DEBUG("CACHE=~s", V),
-		Req:ok([{"Content-Type", "application/json"}], V)
+		Req:ok([{"Content-Type", "application/json"}], Value)
   end.
   
 handle_adjson(Args, Req)->
@@ -100,11 +96,11 @@ handle_adhtml(Args, Req) ->
   </body>
   </html>", [Xml]).
     
-handle('GET', ["ad", RespType], Args, Req, C)->
+handle('GET', ["ad", RespType], Args, Req, Conn)->
 case RespType of
   "json" -> handle_adjson(Args, Req);
   "html" -> handle_adhtml(Args, Req);
-  "test" -> handle_adtest(Args, Req, C);
+  "test" -> handle_adtest(Args, Req, Conn);
   _ -> page_not_found(Req)
 end;
 

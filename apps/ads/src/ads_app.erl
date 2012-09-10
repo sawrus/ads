@@ -11,8 +11,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-	{ok, Port} = application:get_env(http_port),
-    ads_http:start(Port).
+    ads_http:start().
 
 stop(_State) ->
 	ads_http:stop().
