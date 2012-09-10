@@ -14,6 +14,6 @@ start(_StartType, _StartArgs) ->
     ads_http:start().
 
 stop(_State) ->
-	ads_http:stop().
+    ads_http:stop().
 	
 	

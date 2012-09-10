@@ -8,14 +8,14 @@
 %% Application callbacks
 %% ===================================================================
 
-get(Key, Conn)->
-	Response = eredis:q(Conn, ["GET", Key]),
-	Response.
-	
-put(Key, Value, Conn)->
-	{ok, <<"OK">>} = eredis:q(Conn, ["SET", Key, Value]).
-	
-open()->
-	Response = eredis:start_link(),
-	{ok, Conn} = Response,
-	Conn.
+get(Key, Conn) ->
+    Response = eredis:q(Conn, ["GET", Key]),
+    Response.
+
+put(Key, Value, Conn) ->
+    {ok, <<"OK">>} = eredis:q(Conn, ["SET", Key, Value]).
+
+open() ->
+    Response = eredis:start_link(),
+    {ok, Conn} = Response,
+    Conn.

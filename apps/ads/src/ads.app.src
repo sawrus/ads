@@ -19,6 +19,6 @@
   ]},
   {env, [
 	{http_port, 7777},
-	{http_folder, "/d/ads"}
+	{http_folder, "/ads/static"}
    ]}
  ]}.

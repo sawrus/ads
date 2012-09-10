@@ -8,9 +8,9 @@
 %% Application callbacks
 %% ===================================================================
 
-genkey(Args)->
-  F = fun({Key, Value}, Acc) ->
-    [lists:flatten(Value++":") | Acc]
-  end,
-  K = lists:flatten(lists:reverse(lists:foldl(F, [], Args))),
-  K.
+genkey(Args) ->
+    F = fun({Key, Value}, Acc) ->
+        [lists:flatten(Value ++ ":") | Acc]
+    end,
+    K = lists:flatten(lists:reverse(lists:foldl(F, [], Args))),
+    K.
