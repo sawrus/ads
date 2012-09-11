@@ -1,8 +1,11 @@
 -module(ads_data).
 
 %% API
--export([get/2, put/3, open/0, get_stat/2, set_stat/3, parse_stat/1]).
+-export([get/2, put/3, open/0, get_stat/2, set_stat/3, alloc_stat/2]).
 
+
+%% macros
+-define(STAT_VALUE_COUNT, 3).
 
 %% ===================================================================
 %% Application callbacks
@@ -20,19 +23,21 @@ open() ->
     {ok, Conn} = Response,
     Conn.
 
-empty_stat()->
-	Stat = io_lib:format("{\"~s\",\"~s\",\"~s\"}", [
-		integer_to_list(0), 
-		integer_to_list(0), 
-		integer_to_list(0) 
-	]),
-	Stat.
+
+alloc_stat(_, 0)-> [];
+alloc_stat(Stat, Size) when Size == length(Stat) -> Stat;
+alloc_stat(Stat, Size) -> alloc_stat([0 | Stat], Size).
+
+empty_stat(Key)->
+	Value = alloc_stat([], ?STAT_VALUE_COUNT),
+	JSON = to_json(Key, Value),
+	JSON.
 
 get_stat(Key, Conn) ->
 	{ok, Stat} = get(Key, Conn),
 	if 
 		undefined == Stat->
-			empty_stat();
+			empty_stat(Key);
 		true->
 			Stat
 	end.
@@ -48,7 +53,7 @@ numlist([H|T])-> [bin_to_num(H) | numlist(T)];
 numlist([])-> [].
 
 %%
-%% Stat JSON: "{\"key\": [\"1\",\"2\",\"3\"] }"
+%% Stat JSON: "{\"key\": [1, 2, 3] }"
 %%
 
 parse_stat(JsonStat) ->
@@ -59,8 +64,23 @@ parse_stat(JsonStat) ->
 	L3 = numlist(L2),
 	L3.
 
-set_stat(StatType, Key, Conn)->
-	ok.
-		
+to_json(Key, Value)->
+	JSON = json_epp:term_to_json({[{Key, Value}]}),
+	JSON.
+
+inc_stat([], _, _) -> [];
+inc_stat([H|Stat], CountKey, IncNumber) when CountKey == IncNumber -> [H+1| Stat];
+inc_stat([H|Stat], CountKey, IncNumber) -> [H | inc_stat(Stat, CountKey - 1, IncNumber)].
+
+set_stat(StatNumber, Key, Conn)->
+	{ok, Stat} = get(Key, Conn),
+	if 
+		undefined == Stat ->
+			put(Key, empty_stat(Key), Conn);
+		true ->
+		CurStat = parse_stat(Stat),
+		NewStat = inc_stat(CurStat, ?STAT_VALUE_COUNT, StatNumber),
+		put(Key, to_json(Key, NewStat), Conn)
+	end.	
 
 

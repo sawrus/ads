@@ -1,0 +1,9 @@
+{application,ads,
+             [{description,[]},
+              {vsn,"1"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {mod,{ads_app,[]}},
+              {modules,[ads_app,ads_data,ads_http,ads_req,ads_sup,ads_test,
+                        ads_util]},
+              {env,[{http_port,7777},{http_folder,"/ads/static"}]}]}.
