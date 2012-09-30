@@ -33,27 +33,27 @@ put(Key, Value, Conn) ->
 %% Stat functions
 %%
 inc_stat(Stat, IncNumber) -> inc_stat(Stat, IncNumber, 1).
-inc_stat(Stat, IncNumber, IncValue) ->
-    lists:sublist(Stat, IncNumber - 1) ++
-    [lists:nth(IncNumber, Stat) + IncValue] ++
-    lists:nthtail(IncNumber, Stat).
+inc_stat(Stat, IncNumber, IncValue) -> 
+	lists:sublist(Stat, IncNumber -1) ++ 
+	[lists:nth(IncNumber, Stat) + IncValue] ++ 
+	lists:nthtail(IncNumber, Stat).
 
 get_stat(Key, Conn) ->
     {ok, Value} = get(Key, Conn),
-    if
-        undefined == Value ->
-        Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
-        true ->
-        Stat = binary_to_list(Value)
+    if 
+      	undefined == Value->
+            Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
+        true->
+            Stat = binary_to_list(Value)
     end,
     Stat.
 
-set_stat(StatNumber, Key, Conn) ->
+set_stat(StatNumber, Key, Conn)->
     {ok, Stat} = get(Key, Conn),
-    if
+    if 
         undefined == Stat ->
-        put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
+            put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
         true ->
-        NewStat = inc_stat(binary_to_list(Stat), StatNumber),
-        put(Key, NewStat, Conn)
+            NewStat = inc_stat(binary_to_list(Stat), StatNumber),
+            put(Key, NewStat, Conn)
     end.

@@ -11,8 +11,8 @@ page_not_found(Req) ->
     Req:ok([{"Content-Type", "text/plain"}], "Page not found.").
 
 respond(HttpCode, Req) ->
-	Req:respond(HttpCode, [{"Content-Type", "text/plain"}], 
-		integer_to_list(HttpCode)).
+    Req:respond(HttpCode, [{"Content-Type", "text/plain"}],
+        integer_to_list(HttpCode)).
 
 %% Handle HTTP request callbacks
 handle(Req, Conn) ->
@@ -24,7 +24,7 @@ handle(Req, Conn) ->
         'POST' ->
             Args = Req:parse_post()
     end,
-	Uri = Req:resource([lowercase, urldecode]),
+    Uri = Req:resource([lowercase, urldecode]),
 % Handle request by parameters
     handle(Method, Uri, Args, Req, Conn).
 
@@ -32,22 +32,22 @@ handle(Req, Conn) ->
 %% Responces 
 %% Respone body types: [application/json, plain/html].
 calc_stat('clicks', Args, Req, Conn) ->
-	ads_data:set_stat(1, ads_util:genkey(Args), Conn),
+    ads_data:set_stat(1, ads_util:genkey(Args), Conn),
     respond(200, Req);
 
 calc_stat('downloads', Args, Req, Conn) ->
-	ads_data:set_stat(2, ads_util:genkey(Args), Conn),
+    ads_data:set_stat(2, ads_util:genkey(Args), Conn),
     respond(200, Req);
 
 calc_stat('impressions', Args, Req, Conn) ->
-	ads_data:set_stat(3, ads_util:genkey(Args), Conn),
+    ads_data:set_stat(3, ads_util:genkey(Args), Conn),
     respond(200, Req).
 
 prepare_report(Args, Req, Conn) ->
-	Key   = ads_util:genkey(Args),
-	Value = ads_data:get_stat(Key, Conn),
-	JSON  = json_eep:term_to_json({[{Key, Value}]}),
-	Req:ok([{"Content-Type", "application/json"}], JSON).
+    Key = ads_util:genkey(Args),
+    Value = ads_data:get_stat(Key, Conn),
+    JSON = json_eep:term_to_json({[{Key, Value}]}),
+    Req:ok([{"Content-Type", "application/json"}], JSON).
 
 %% function for test mode
 %% TODO: need to delete this block
@@ -58,9 +58,9 @@ build_adjson(Key) ->
     N = [{"Networks", "P"}, {"V", "NVALUE"}, {"Key", Key}, {"Time", T}],
     IN = [{"Networks", "P"}, {"V", "INVALUE"}, {"Key", Key}, {"Time", T}],
     BuildJSON = fun({Param, Value}, Acc) ->
- 		[lists:flatten(
-			io_lib:format("{\"~s\":\"~s\"},\n", [Param, Value])) | Acc
-		]
+        [lists:flatten(
+            io_lib:format("{\"~s\":\"~s\"},\n", [Param, Value])) | Acc
+        ]
     end,
     EJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], E))),
     NJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], N))),
@@ -75,25 +75,25 @@ handle_adjson(Args, Req, Conn) ->
     Key = ads_util:genkey(Args),
     {ok, Value} = ads_data:get(Key, Conn),
     if
-    	undefined == Value ->
-			%% ! test mode !
-    	    NewValue = build_adjson(Key),
-		    ads_data:put(Key, NewValue, Conn),
-            Req:ok([{"Content-Type", "application/json"}], NewValue);
+        undefined == Value ->
+        %% ! test mode !
+        NewValue = build_adjson(Key),
+        ads_data:put(Key, NewValue, Conn),
+        Req:ok([{"Content-Type", "application/json"}], NewValue);
         true ->
-    	    Req:ok([{"Content-Type", "application/json"}], Value)
+        Req:ok([{"Content-Type", "application/json"}], Value)
     end.
 
 handle('GET', ["ad", RespType], Args, Req, Conn) ->
     case RespType of
-        "json" 	-> handle_adjson(Args, Req, Conn);
+        "json" -> handle_adjson(Args, Req, Conn);
         _ -> respond(400, Req)
     end;
 
-		
+
 %% Handle GET requests with URI type of '/report/**'
 %% Respone body type: application/json.
-handle('GET', ["report", RespType], Args, Req, Conn)->
+handle('GET', ["report", RespType], Args, Req, Conn) ->
     case RespType of
         "campaign" -> prepare_report(Args, Req, Conn);
         _ -> respond(400, Req)
@@ -102,7 +102,7 @@ handle('GET', ["report", RespType], Args, Req, Conn)->
 
 %% Handle GET requests with URI type of '/stat/**'
 %% Respone body type: [plain/text].
-handle('GET', ["stat", RespType], Args, Req, Conn)->
+handle('GET', ["stat", RespType], Args, Req, Conn) ->
     case RespType of
         "clicks" -> calc_stat('clicks', Args, Req, Conn);
         "downloads" -> calc_stat('downloads', Args, Req, Conn);
@@ -114,13 +114,13 @@ handle('GET', ["stat", RespType], Args, Req, Conn)->
 %% Handle GET requests by input Url
 %% Respone body types: [plain/html].
 handle('GET', Url, _, Req, _) ->
-    {ok,Folder} = application:get_env(http_folder),
+    {ok, Folder} = application:get_env(http_folder),
     File = Folder ++ "/" ++ Url,
     case filelib:is_file(File) of
-		true -> Req:file(File);
-		false-> respond(404, Req)
+        true -> Req:file(File);
+        false -> respond(404, Req)
     end;
-	
+
 
 %% Handle any other requests
 handle(_, _, _, Req, _) ->

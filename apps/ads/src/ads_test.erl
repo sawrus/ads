@@ -44,16 +44,16 @@ data_putget_test() ->
     ?assertEqual({ok, <<"A:B:C:">>}, ads_data:get("A:B:C:", Conn)).
 
 data_getstat_test() ->
-	Conn = ads_data:open(),
-	?assertMatch({ok, _}, eredis:q(Conn, ["DEL", "K"])),
-	ads_data:set_stat(0, "K", Conn),
-	?assertEqual([0,0,0], ads_data:get_stat("K", Conn)),
-	ads_data:set_stat(1, "K", Conn),
-	?assertEqual([1,0,0], ads_data:get_stat("K", Conn)),
-	ads_data:set_stat(2, "K", Conn),
-	?assertEqual([1,1,0], ads_data:get_stat("K", Conn)),
-	ads_data:set_stat(3, "K", Conn),
-	?assertEqual([1,1,1], ads_data:get_stat("K", Conn)).
+    Conn = ads_data:open(),
+    ?assertMatch({ok, _}, eredis:q(Conn, ["DEL", "K"])),
+    ads_data:set_stat(0, "K", Conn),
+    ?assertEqual([0, 0, 0], ads_data:get_stat("K", Conn)),
+    ads_data:set_stat(1, "K", Conn),
+    ?assertEqual([1, 0, 0], ads_data:get_stat("K", Conn)),
+    ads_data:set_stat(2, "K", Conn),
+    ?assertEqual([1, 1, 0], ads_data:get_stat("K", Conn)),
+    ads_data:set_stat(3, "K", Conn),
+    ?assertEqual([1, 1, 1], ads_data:get_stat("K", Conn)).
 
 %%
 %% Util module tests
