@@ -5,18 +5,16 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--export([data_get/0, data_rget/0]).
-
-%% ===================================================================
 %% Application test callbacks
-%% ===================================================================
 
 -ifdef(TEST).
 
+%% App module tests
 app_start_test() ->
     ok = application:start(ads),
     ?assert(undefined == whereis(ads_sup)).
 
+%% Data module tests
 data_conn_test() ->
     Res = eredis:start_link(),
     ?assertMatch({ok, _}, Res),
@@ -45,20 +43,25 @@ data_putget_test() ->
     ads_data:put("A:B:C:", "A:B:C:", Conn),
     ?assertEqual({ok, <<"A:B:C:">>}, ads_data:get("A:B:C:", Conn)).
 
+data_getstat_test() ->
+	Conn = ads_data:open(),
+	?assertMatch({ok, _}, eredis:q(Conn, ["DEL", "K"])),
+	ads_data:set_stat(0, "K", Conn),
+	?assertEqual([0,0,0], ads_data:get_stat("K", Conn)),
+	ads_data:set_stat(1, "K", Conn),
+	?assertEqual([1,0,0], ads_data:get_stat("K", Conn)),
+	ads_data:set_stat(2, "K", Conn),
+	?assertEqual([1,1,0], ads_data:get_stat("K", Conn)),
+	ads_data:set_stat(3, "K", Conn),
+	?assertEqual([1,1,1], ads_data:get_stat("K", Conn)).
+
+%%
+%% Util module tests
+%%
+
 util_genkey_test() ->
     ?assertEqual("A:", ads_util:genkey([{"A", "A"}])),
     ?assertEqual("A:B:", ads_util:genkey([{"A", "A"}, {"B", "B"}])).
 
 -endif.
 
-data_get() ->
-    Conn = ads_data:open(),
-    R = ads_data:get("A:B:C", Conn),
-    {ok, V} = R,
-    io:format("V=~p", [V]).
-
-data_rget() ->
-    Conn = ads_data:open(),
-    {ok, undefined} = eredis:q(Conn, ["GET", "A:B:C:"]).
-	
-	

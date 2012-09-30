@@ -1,15 +1,22 @@
 -module(ads_data).
 
 %% API
--export([get/2, put/3, open/0, get_stat/2, set_stat/3, alloc_stat/2]).
-
+-export([get/2, put/3, open/0, get_stat/2, set_stat/3]).
 
 %% macros
--define(STAT_VALUE_COUNT, 3).
+-define(STAT_SIZE, 3).
+-define(STAT_NIL, 0).
+-define(STAT_INC, 1).
 
-%% ===================================================================
 %% Application callbacks
-%% ===================================================================
+
+%%
+%% NoSQL functions
+%%
+open() ->
+    Response = eredis:start_link(),
+    {ok, Conn} = Response,
+    Conn.
 
 get(Key, Conn) ->
     Response = eredis:q(Conn, ["GET", Key]),
@@ -18,69 +25,35 @@ get(Key, Conn) ->
 put(Key, Value, Conn) ->
     {ok, <<"OK">>} = eredis:q(Conn, ["SET", Key, Value]).
 
-open() ->
-    Response = eredis:start_link(),
-    {ok, Conn} = Response,
-    Conn.
+%%
+%% JSON serialize util functions
+%% json_eep:term_to_json({[{Key, Value}]}),
 
-
-alloc_stat(_, 0)-> [];
-alloc_stat(Stat, Size) when Size == length(Stat) -> Stat;
-alloc_stat(Stat, Size) -> alloc_stat([0 | Stat], Size).
-
-empty_stat(Key)->
-	Value = alloc_stat([], ?STAT_VALUE_COUNT),
-	JSON = to_json(Key, Value),
-	JSON.
+%%
+%% Stat functions
+%%
+inc_stat(Stat, IncNumber) -> inc_stat(Stat, IncNumber, 1).
+inc_stat(Stat, IncNumber, IncValue)->
+	lists:sublist(Stat, IncNumber -1) ++ 
+	[lists:nth(IncNumber, Stat) + IncValue] ++ 
+	lists:nthtail(IncNumber, Stat).
 
 get_stat(Key, Conn) ->
-	{ok, Stat} = get(Key, Conn),
+	{ok, Value} = get(Key, Conn),
 	if 
-		undefined == Stat->
-			empty_stat(Key);
+		undefined == Value->
+			Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
 		true->
-			Stat
-	end.
-
-bin_to_num(Bin) ->
-    N = binary_to_list(Bin),
-    case string:to_float(N) of
-        {error,no_float} -> list_to_integer(N);
-        {F,_Rest} -> F
-    end.
-
-numlist([H|T])-> [bin_to_num(H) | numlist(T)];
-numlist([])-> [].
-
-%%
-%% Stat JSON: "{\"key\": [1, 2, 3] }"
-%%
-
-parse_stat(JsonStat) ->
-	T1 = json_eep:json_to_term(JsonStat),
-	L1 = element(1, T1),
-	[H|[]]  = L1, 
-	L2 = element(2, H),
-	L3 = numlist(L2),
-	L3.
-
-to_json(Key, Value)->
-	JSON = json_epp:term_to_json({[{Key, Value}]}),
-	JSON.
-
-inc_stat([], _, _) -> [];
-inc_stat([H|Stat], CountKey, IncNumber) when CountKey == IncNumber -> [H+1| Stat];
-inc_stat([H|Stat], CountKey, IncNumber) -> [H | inc_stat(Stat, CountKey - 1, IncNumber)].
+			Stat = binary_to_list(Value)
+	end,
+	Stat.
 
 set_stat(StatNumber, Key, Conn)->
 	{ok, Stat} = get(Key, Conn),
 	if 
 		undefined == Stat ->
-			put(Key, empty_stat(Key), Conn);
+			put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
 		true ->
-		CurStat = parse_stat(Stat),
-		NewStat = inc_stat(CurStat, ?STAT_VALUE_COUNT, StatNumber),
-		put(Key, to_json(Key, NewStat), Conn)
-	end.	
-
-
+			NewStat = inc_stat(binary_to_list(Stat), StatNumber),
+			put(Key, NewStat, Conn)
+	end.
