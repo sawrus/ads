@@ -42,9 +42,9 @@ get_stat(Key, Conn) ->
     {ok, Value} = get(Key, Conn),
     if
         undefined == Value ->
-        Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
+            Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
         true ->
-        Stat = binary_to_list(Value)
+            Stat = binary_to_list(Value)
     end,
     Stat.
 
@@ -52,8 +52,8 @@ set_stat(StatNumber, Key, Conn) ->
     {ok, Stat} = get(Key, Conn),
     if
         undefined == Stat ->
-        put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
+            put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
         true ->
-        NewStat = inc_stat(binary_to_list(Stat), StatNumber),
-        put(Key, NewStat, Conn)
+            NewStat = inc_stat(binary_to_list(Stat), StatNumber),
+            put(Key, NewStat, Conn)
     end.

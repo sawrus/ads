@@ -9,9 +9,11 @@
 start() ->
     {ok, Port} = application:get_env(http_port),
     {ok, Folder} = application:get_env(http_folder),
+    {ok, Compress} = application:get_env(http_compress),
     Conn = ads_data:open(),
     misultin:start_link([
         {port, Port},
+        {compress, Compress},
         {static, Folder},
         {loop, fun(Req) -> ads_req:handle(Req, Conn) end}
     ]).

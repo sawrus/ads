@@ -6,17 +6,9 @@
 % API
 -export([handle/2]).
 
-%% Build default response with 404 and other HTTP codes
-page_not_found(Req) ->
-    Req:ok([{"Content-Type", "text/plain"}], "Page not found.").
-
-respond(HttpCode, Req) ->
-    Req:respond(HttpCode, [{"Content-Type", "text/plain"}],
-        integer_to_list(HttpCode)).
-
 %% Handle HTTP request callbacks
 handle(Req, Conn) ->
-% get params depending on method
+    % get params depending on method
     Method = Req:get(method),
     case Method of
         'GET' ->
@@ -25,23 +17,32 @@ handle(Req, Conn) ->
             Args = Req:parse_post()
     end,
     Uri = Req:resource([lowercase, urldecode]),
-% Handle request by parameters
-    handle(Method, Uri, Args, Req, Conn).
+    % Handle request by parameters
+    try
+        handle(Method, Uri, Args, Req, Conn)
+    catch
+        Exception : Reason -> 
+            ETempl = "Exception: ~p~nReason: ~p~nStacktrace: ~p",
+            EList  = [Exception, Reason, erlang:get_stacktrace()],
+            ?LOG_DEBUG(ETempl, EList),
+            Message = io_lib:format(ETempl, EList),
+            Req:respond(500, [{"Content-Type", "text/plain"}], Message)
+    end.
 
 
 %% Responces 
 %% Respone body types: [application/json, plain/html].
 calc_stat('clicks', Args, Req, Conn) ->
     ads_data:set_stat(1, ads_util:genkey(Args), Conn),
-    respond(200, Req);
+    Req:respond(200);
 
 calc_stat('downloads', Args, Req, Conn) ->
     ads_data:set_stat(2, ads_util:genkey(Args), Conn),
-    respond(200, Req);
+    Req:respond(200);
 
 calc_stat('impressions', Args, Req, Conn) ->
     ads_data:set_stat(3, ads_util:genkey(Args), Conn),
-    respond(200, Req).
+    Req:respond(200).
 
 prepare_report(Args, Req, Conn) ->
     Key = ads_util:genkey(Args),
@@ -76,18 +77,18 @@ handle_adjson(Args, Req, Conn) ->
     {ok, Value} = ads_data:get(Key, Conn),
     if
         undefined == Value ->
-        %% ! test mode !
-        NewValue = build_adjson(Key),
-        ads_data:put(Key, NewValue, Conn),
-        Req:ok([{"Content-Type", "application/json"}], NewValue);
+            %% ! test mode !
+            NewValue = build_adjson(Key),
+            ads_data:put(Key, NewValue, Conn),
+            Req:ok([{"Content-Type", "application/json"}], NewValue);
         true ->
-        Req:ok([{"Content-Type", "application/json"}], Value)
+            Req:ok([{"Content-Type", "application/json"}], Value)
     end.
 
 handle('GET', ["ad", RespType], Args, Req, Conn) ->
     case RespType of
         "json" -> handle_adjson(Args, Req, Conn);
-        _ -> respond(400, Req)
+        _ -> Req:respond(400)
     end;
 
 
@@ -96,7 +97,7 @@ handle('GET', ["ad", RespType], Args, Req, Conn) ->
 handle('GET', ["report", RespType], Args, Req, Conn) ->
     case RespType of
         "campaign" -> prepare_report(Args, Req, Conn);
-        _ -> respond(400, Req)
+        _ -> Req:respond(400)
     end;
 
 
@@ -107,22 +108,32 @@ handle('GET', ["stat", RespType], Args, Req, Conn) ->
         "clicks" -> calc_stat('clicks', Args, Req, Conn);
         "downloads" -> calc_stat('downloads', Args, Req, Conn);
         "impressions" -> calc_stat('impressions', Args, Req, Conn);
-        _ -> respond(400, Req)
+        _ -> Req:respond(400)
     end;
 
 
 %% Handle GET requests by input Url
 %% Respone body types: [plain/html].
-handle('GET', Url, _, Req, _) ->
+handle('GET', Url, _, Req, Conn) ->
     {ok, Folder} = application:get_env(http_folder),
     File = Folder ++ "/" ++ Url,
-    case filelib:is_file(File) of
-        true -> Req:file(File);
-        false -> respond(404, Req)
+    {ok, FileContent} = ads_data:get(Url, Conn),
+    if
+        undefined == FileContent->
+            case filelib:is_file(File) of
+                true -> 
+                    {ok, Bin} = file:read_file(File),
+                    ads_data:put(Url, binary_to_list(Bin), Conn),
+                    Req:file(File);
+                false -> 
+                    Req:respond(404)
+            end;
+        true ->
+            Req:ok([{"Content-Type", "text/html"}], FileContent) 
     end;
 
 
 %% Handle any other requests
 handle(_, _, _, Req, _) ->
-    page_not_found(Req).
+    Req:respond(404).
   
