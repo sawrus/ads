@@ -3,10 +3,8 @@
 %% API
 -export([get/2, put/3, open/0, get_stat/2, set_stat/3]).
 
-%% macros
--define(STAT_SIZE, 3).
--define(STAT_NIL, 0).
--define(STAT_INC, 1).
+% includes
+-include("../include/ads.hrl").
 
 %% Application callbacks
 

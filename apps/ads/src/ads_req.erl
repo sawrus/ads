@@ -32,23 +32,25 @@ handle(Req, Conn) ->
 
 %% Responces 
 %% Respone body types: [application/json, plain/html].
-calc_stat('clicks', Args, Req, Conn) ->
-    ads_data:set_stat(1, ads_util:genkey(Args), Conn),
-    Req:respond(200);
-
-calc_stat('downloads', Args, Req, Conn) ->
-    ads_data:set_stat(2, ads_util:genkey(Args), Conn),
-    Req:respond(200);
-
-calc_stat('impressions', Args, Req, Conn) ->
-    ads_data:set_stat(3, ads_util:genkey(Args), Conn),
-    Req:respond(200).
-
+calc_stat(IncNumber, Args, Req, Conn) ->
+    ValidateResult = ads_util:validate(Args, ?ADSTAT), 
+    if 
+        false == ValidateResult -> Req:respond(400); 
+        true ->
+            ads_data:set_stat(IncNumber, ads_util:genkey(Args), Conn),
+            Req:respond(200)
+    end.
+ 
 prepare_report(Args, Req, Conn) ->
-    Key = ads_util:genkey(Args),
-    Value = ads_data:get_stat(Key, Conn),
-    JSON = json_eep:term_to_json({[{Key, Value}]}),
-    Req:ok([{"Content-Type", "application/json"}], JSON).
+    ValidateResult = ads_util:validate(Args, ?ADSTAT), 
+    if 
+        false == ValidateResult -> Req:respond(400); 
+        true ->
+            Key = ads_util:genkey(Args),
+            Value = ads_data:get_stat(Key, Conn),
+            JSON = json_eep:term_to_json({[{Key, Value}]}),
+            Req:ok([{"Content-Type", "application/json"}], JSON)
+    end.
 
 %% function for test mode
 %% TODO: need to delete this block
@@ -73,9 +75,12 @@ build_adjson(Key) ->
 %% Handle GET requests with URI type of '/ad/**'
 %% Respone body types: [application/json].
 handle_adjson(Args, Req, Conn) ->
+    ValidateResult = ads_util:validate(Args, ?ADJSON), 
     Key = ads_util:genkey(Args),
     {ok, Value} = ads_data:get(Key, Conn),
     if
+        false == ValidateResult ->
+            Req:respond(400);
         undefined == Value ->
             %% ! test mode !
             NewValue = build_adjson(Key),
@@ -105,9 +110,9 @@ handle('GET', ["report", RespType], Args, Req, Conn) ->
 %% Respone body type: [plain/text].
 handle('GET', ["stat", RespType], Args, Req, Conn) ->
     case RespType of
-        "clicks" -> calc_stat('clicks', Args, Req, Conn);
-        "downloads" -> calc_stat('downloads', Args, Req, Conn);
-        "impressions" -> calc_stat('impressions', Args, Req, Conn);
+        "clicks" -> calc_stat(1, Args, Req, Conn);
+        "downloads" -> calc_stat(2, Args, Req, Conn);
+        "impressions" -> calc_stat(3, Args, Req, Conn);
         _ -> Req:respond(400)
     end;
 

@@ -63,5 +63,11 @@ util_genkey_test() ->
     ?assertEqual("A:", ads_util:genkey([{"A", "A"}])),
     ?assertEqual("A:B:", ads_util:genkey([{"A", "A"}, {"B", "B"}])).
 
+util_validate_test() ->
+    ?assertEqual(true, ads_util:validate([{"A", "B"}], ["A"])),
+    ?assertEqual(false, ads_util:validate([{"A", "B"}], ["B"])),
+    ?assertEqual(true, ads_util:validate([{"A", "B"},{"A2", "B2"},{"A3","B3"}], ["A","A2","A3"])),
+    ?assertEqual(false, ads_util:validate([{"A", "B"},{"A2", "B2"},{"A3","B3"}], ["A","A2","B3"])).
+
 -endif.
 
