@@ -1,13 +1,7 @@
 {application, ads,
  [
-  {description, ""},
-  {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { ads_app, []}},
+  {description, "Ad server statistics"},
+  {vsn, git},
   {modules, [
 	ads_req,
 	ads_data,
@@ -17,9 +11,12 @@
 	ads_sup,
 	ads_app
   ]},
+  {mod, { ads_app, []}},
+  {registered, []},
   {env, [
 	{http_port, 7777},
 	{http_folder, "/ads/static"},
 	{http_compress, true}
-   ]}
+   ]},
+  {applications, [kernel, stdlib]}
  ]}.
