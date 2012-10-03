@@ -24,10 +24,6 @@ put(Key, Value, Conn) ->
     {ok, <<"OK">>} = eredis:q(Conn, ["SET", Key, Value]).
 
 %%
-%% JSON serialize util functions
-%% json_eep:term_to_json({[{Key, Value}]}),
-
-%%
 %% Stat functions
 %%
 inc_stat(Stat, IncNumber) -> inc_stat(Stat, IncNumber, 1).

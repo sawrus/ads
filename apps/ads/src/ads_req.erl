@@ -48,28 +48,22 @@ prepare_report(Args, Req, Conn) ->
         true ->
             Key = ads_util:genkey(Args),
             Value = ads_data:get_stat(Key, Conn),
-            JSON = json_eep:term_to_json({[{Key, Value}]}),
+            JSONTemplate = "{\"~s\":\"~p\"}",
+            JSON = io_lib:format(JSONTemplate, [Key, Value]),
             Req:ok([{"Content-Type", "application/json"}], JSON)
     end.
 
-%% function for test mode
-%% TODO: need to delete this block
 build_adjson(Key) ->
     {H, M, S} = time(),
-    T = io_lib:format('~2..0b:~2..0b:~2..0b', [H, M, S]),
-    E = [{"Extra", "P"}, {"V", "EVALUE"}, {"Key", Key}, {"Time", T}],
-    N = [{"Networks", "P"}, {"V", "NVALUE"}, {"Key", Key}, {"Time", T}],
-    IN = [{"Networks", "P"}, {"V", "INVALUE"}, {"Key", Key}, {"Time", T}],
+    Time  = io_lib:format('~2..0b:~2..0b:~2..0b', [H, M, S]),
+    Extra = [{"Key", Key}, {"Time", Time}],
     BuildJSON = fun({Param, Value}, Acc) ->
         [lists:flatten(
             io_lib:format("{\"~s\":\"~s\"},\n", [Param, Value])) | Acc
         ]
     end,
-    EJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], E))),
-    NJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], N))),
-    INJ = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], IN))),
-    EJ ++ NJ ++ INJ.
-%% TODO: need to delete this block
+    ExtraJson = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], Extra))),
+    ExtraJson.
 
 
 %% Handle GET requests with URI type of '/ad/**'
