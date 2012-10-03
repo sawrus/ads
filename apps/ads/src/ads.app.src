@@ -1,7 +1,7 @@
 {application, ads,
  [
   {description, "Ad server statistics"},
-  {vsn, git},
+  {vsn, "0.1"},
   {modules, [
 	ads_req,
 	ads_data,
