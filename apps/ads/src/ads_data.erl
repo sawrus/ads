@@ -1,7 +1,16 @@
+%%
+%% ADS - Manipulate data on NOSQL level:
+%% Interface for:
+%%  * Getting/Put data by KEY
+%%  * Getting/Set input statistics
 -module(ads_data).
+-vsn("0.1").
 
 %% API
--export([get/2, put/3, open/0, get_stat/2, set_stat/3]).
+% NoSQL callbacks
+-export([get/2, put/3, open/0]).
+% Statistics callbacks
+-export([get_stat/2, set_stat/3]).
 
 % includes
 -include("../include/ads.hrl").

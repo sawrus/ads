@@ -1,9 +1,19 @@
+%%
+%% ADS - Module with call the next point:
+%%  * Starting Misultin HTTP server with env parameters
+%%  * Handling GET requests in loop
+%%  * Stop functionality
+%%
+%% Usage:
+%%  * ads_http:start();
+%%  * ads_http:stop();
 -module(ads_http).
+-vsn("0.1").
 
-% API
+%%% API
 -export([start/0, stop/0]).
 
-%% HTTP Misultin callbacks
+%%% HTTP Misultin callbacks
 
 % Start <M> HTTP server
 start() ->

@@ -1,4 +1,8 @@
+%%
+%% ADS - Main module for testing functionality
+%%
 -module(ads_test).
+-vsn("0.1").
 
 %% Eunit macros
 -ifdef(TEST).
@@ -32,16 +36,16 @@ data_redis_test() ->
 data_putget_test() ->
     Conn = data_conn_test(),
     Key = ads_util:genkey([{"A", "A"}, {"B", "B"}]),
-    ?assertEqual("A:B:", Key),
+    ?assertEqual("A:B", Key),
     ?assertEqual({ok, undefined}, ads_data:get(Key, Conn)),
     ads_data:put(Key, Key, Conn),
     {ok, Value} = ads_data:get(Key, Conn),
-    ?assertEqual(<<"A:B:">>, Value),
+    ?assertEqual(<<"A:B">>, Value),
     ?assertMatch({ok, _}, eredis:q(Conn, ["DEL", Key])),
-    ?assertMatch({ok, _}, eredis:q(Conn, ["DEL", "A:B:C:"])),
-    ?assertEqual({ok, undefined}, ads_data:get("A:B:C:", Conn)),
-    ads_data:put("A:B:C:", "A:B:C:", Conn),
-    ?assertEqual({ok, <<"A:B:C:">>}, ads_data:get("A:B:C:", Conn)).
+    ?assertMatch({ok, _}, eredis:q(Conn, ["DEL", "A:B:C"])),
+    ?assertEqual({ok, undefined}, ads_data:get("A:B:C", Conn)),
+    ads_data:put("A:B:C", "A:B:C", Conn),
+    ?assertEqual({ok, <<"A:B:C">>}, ads_data:get("A:B:C", Conn)).
 
 data_getstat_test() ->
     Conn = ads_data:open(),
@@ -60,8 +64,8 @@ data_getstat_test() ->
 %%
 
 util_genkey_test() ->
-    ?assertEqual("A:", ads_util:genkey([{"A", "A"}])),
-    ?assertEqual("A:B:", ads_util:genkey([{"A", "A"}, {"B", "B"}])).
+    ?assertEqual("A", ads_util:genkey([{"A", "A"}])),
+    ?assertEqual("A:B", ads_util:genkey([{"A", "A"}, {"B", "B"}])).
 
 util_validate_test() ->
     ?assertEqual(true, ads_util:validate([{"A", "B"}], ["A"])),

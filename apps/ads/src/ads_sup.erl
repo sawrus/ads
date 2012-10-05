@@ -1,6 +1,9 @@
+%%
+%% ADS - Manage of AD server via Supervisor interface
+%% 
 -module(ads_sup).
-
 -behaviour(supervisor).
+-vsn("0.1").
 
 %% API
 -export([start_link/0]).

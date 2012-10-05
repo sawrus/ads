@@ -1,12 +1,17 @@
+%%
+%% ADS - Handle request module
+%%
 -module(ads_req).
+-vsn("0.1").
 
 % includes
 -include("../include/ads.hrl").
+-include_lib("kernel/include/file.hrl").
 
 % API
 -export([handle/2]).
 
-%% Handle HTTP request callbacks
+%% @doc Handle HTTP request callbacks
 handle(Req, Conn) ->
     % get params depending on method
     Method = Req:get(method),
@@ -30,8 +35,9 @@ handle(Req, Conn) ->
     end.
 
 
-%% Responces 
-%% Respone body types: [application/json, plain/html].
+%%% Respone body types: [application/json].
+
+%% @doc Calculate statistics by request parameters and IncNumber
 calc_stat(IncNumber, Args, Req, Conn) ->
     ValidateResult = ads_util:validate(Args, ?ADSTAT), 
     if 
@@ -40,7 +46,8 @@ calc_stat(IncNumber, Args, Req, Conn) ->
             ads_data:set_stat(IncNumber, ads_util:genkey(Args), Conn),
             Req:respond(200)
     end.
- 
+
+%% @doc Prepare statistics report via GET parameters of input request
 prepare_report(Args, Req, Conn) ->
     ValidateResult = ads_util:validate(Args, ?ADSTAT), 
     if 
@@ -53,7 +60,8 @@ prepare_report(Args, Req, Conn) ->
             Req:ok([{"Content-Type", "application/json"}], JSON)
     end.
 
-build_adjson(Key) ->
+%% @doc Building configurations of defined applications
+prepare_config(Key) ->
     {H, M, S} = time(),
     Time  = io_lib:format('~2..0b:~2..0b:~2..0b', [H, M, S]),
     Extra = [{"Key", Key}, {"Time", Time}],
@@ -65,8 +73,15 @@ build_adjson(Key) ->
     ExtraJson = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], Extra))),
     ExtraJson.
 
+%% @doc Put file content in NoSQL cache
+save_file(FilePath, Url, Req, Conn) ->
+    {ok, BinaryFileContent} = file:read_file(FilePath),
+    FileModifiedTime = io_lib:format("~p", [ads_util:get_mtime(FilePath)]),
+    FileContent = binary_to_list(BinaryFileContent),
+    ads_data:put(Url, string:join([FileModifiedTime, FileContent], ?HTML_SEPARATOR), Conn),
+    Req:file(FilePath).
 
-%% Handle GET requests with URI type of '/ad/**'
+%% @doc Handle GET requests with URI type of '/ad/**'
 %% Respone body types: [application/json].
 handle_adjson(Args, Req, Conn) ->
     ValidateResult = ads_util:validate(Args, ?ADJSON), 
@@ -77,7 +92,7 @@ handle_adjson(Args, Req, Conn) ->
             Req:respond(400);
         undefined == Value ->
             %% ! test mode !
-            NewValue = build_adjson(Key),
+            NewValue = prepare_config(Key),
             ads_data:put(Key, NewValue, Conn),
             Req:ok([{"Content-Type", "application/json"}], NewValue);
         true ->
@@ -91,7 +106,7 @@ handle('GET', ["ad", RespType], Args, Req, Conn) ->
     end;
 
 
-%% Handle GET requests with URI type of '/report/**'
+%% @doc Handle GET requests with URI type of '/report/**'
 %% Respone body type: application/json.
 handle('GET', ["report", RespType], Args, Req, Conn) ->
     case RespType of
@@ -100,7 +115,7 @@ handle('GET', ["report", RespType], Args, Req, Conn) ->
     end;
 
 
-%% Handle GET requests with URI type of '/stat/**'
+%% @doc Handle GET requests with URI type of '/stat/**'
 %% Respone body type: [plain/text].
 handle('GET', ["stat", RespType], Args, Req, Conn) ->
     case RespType of
@@ -110,29 +125,30 @@ handle('GET', ["stat", RespType], Args, Req, Conn) ->
         _ -> Req:respond(400)
     end;
 
-
-%% Handle GET requests by input Url
+%% @doc Handle GET requests by input Url
 %% Respone body types: [plain/html].
 handle('GET', Url, _, Req, Conn) ->
     {ok, Folder} = application:get_env(http_folder),
-    File = Folder ++ "/" ++ Url,
-    {ok, FileContent} = ads_data:get(Url, Conn),
+    FilePath = Folder ++ "/" ++ Url,
+    {ok, BinaryFileContent} = ads_data:get(Url, Conn),
+    FileExist = filelib:is_file(FilePath), 
     if
-        undefined == FileContent->
-            case filelib:is_file(File) of
-                true -> 
-                    {ok, Bin} = file:read_file(File),
-                    ads_data:put(Url, binary_to_list(Bin), Conn),
-                    Req:file(File);
-                false -> 
-                    Req:respond(404)
-            end;
-        true ->
-            Req:ok([{"Content-Type", "text/html"}], FileContent) 
+        false == FileExist ->
+            Req:respond(404);
+        undefined == BinaryFileContent->
+            save_file(FilePath, Url, Req, Conn);
+        true ->                            
+            ActualModifiedTime = integer_to_list(ads_util:get_mtime(FilePath)),
+            [CachedModifiedTime, FileContent] = string:tokens(binary_to_list(BinaryFileContent), ?HTML_SEPARATOR),
+            if 
+                ActualModifiedTime =/= CachedModifiedTime  ->
+                    save_file(FilePath, Url, Req, Conn);
+                true ->
+                    Req:ok([{"Content-Type", "text/html"}], FileContent)
+            end
     end;
 
-
-%% Handle any other requests
+%% @doc Handle any other requests
 handle(_, _, _, Req, _) ->
     Req:respond(404).
   
