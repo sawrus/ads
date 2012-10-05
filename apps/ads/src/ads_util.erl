@@ -17,13 +17,13 @@
 
 %% @doc Generate Key based on Args proplist
 %% Usage:
-%% ads_util:genkey([{"A", "B"}, {"C", "D"}]) returns string "A:C"
+%% ads_util:genkey([{"A", "B"}, {"C", "D"}]) returns string "B:D"
 -spec genkey(TupleList::[tuple()]) -> string().
 genkey(TupleList) -> genkey(TupleList, ?STAT_SEPARATOR).
 
 -spec genkey(TupleList::[tuple()], Sep::string()) -> string().
-genkey([{H, _} | T], Sep) ->
-    H ++ lists:append([Sep ++ Key || {Key, _} <- T]).
+genkey([{_, H} | T], Sep) ->
+    H ++ lists:append([Sep ++ Key || {_, Key} <- T]).
 
 %% @doc Validate that keys of proplist equals the second argument of this function.
 %% Usage:

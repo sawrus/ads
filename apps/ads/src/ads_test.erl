@@ -13,11 +13,6 @@
 
 -ifdef(TEST).
 
-%% App module tests
-app_start_test() ->
-    ok = application:start(ads),
-    ?assert(undefined == whereis(ads_sup)).
-
 %% Data module tests
 data_conn_test() ->
     Res = eredis:start_link(),
