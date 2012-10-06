@@ -147,7 +147,7 @@ handle('POST', ["upload"], Args, Req, _) ->
             % save file
             case file:write_file(DestFile, FileData) of
                 ok ->
-                    Req:respond(200);
+                    Req:file(DestFile);
                 {error, _Reason} ->
                     Req:respond(500)
             end;
