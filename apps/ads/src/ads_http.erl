@@ -23,10 +23,15 @@ start() ->
     Conn = ads_data:open(),
     misultin:start_link([
         {port, Port},
+        {access_log, fun(AccessInfo) -> access_log(AccessInfo) end},
         {compress, Compress},
         {static, Folder},
         {loop, fun(Req) -> ads_req:handle(Req, Conn) end}
     ]).
+
+% callback on access log
+access_log({PeerAddr, DateTime, RequestLine, HttpCode, ContentLength}) ->
+    io:format("~s - - [~s] \"~s\" ~p ~p~n", [PeerAddr, DateTime, RequestLine, HttpCode, ContentLength]).
 
 % Stop <M> HTTP server
 stop() ->

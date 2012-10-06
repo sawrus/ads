@@ -100,6 +100,7 @@ handle_adjson(Args, Req, Conn) ->
     end.
 
 handle('GET', ["ad", RespType], Args, Req, Conn) ->
+    ?LOG_DEBUG("AD; RespType=~p", [RespType]),
     case RespType of
         "json" -> handle_adjson(Args, Req, Conn);
         _ -> Req:respond(400)
@@ -124,6 +125,40 @@ handle('GET', ["stat", RespType], Args, Req, Conn) ->
         "impressions" -> calc_stat(3, Args, Req, Conn);
         _ -> Req:respond(400)
     end;
+
+% handle a GET on /
+handle('GET', ["upload"], _, Req, _) -> Req:ok([{"Content-Type", "text/html"}], 
+["<html><head><title>File Upload</title></head>
+    <body>
+        <form action=\"/upload\" method=\"POST\" enctype=\"multipart/form-data\">
+            <input type=\"file\" name=\"file\">
+            <input type=\"submit\">
+        </form>
+    </body>
+</html>"]);
+
+% handle a POST on / -> file received
+handle('POST', ["upload"], Args, Req, _) ->
+    case Args of
+        [{_Tag, Attributes, FileData}] ->
+            % build destination file path
+            {ok, DestPath} = application:get_env(http_folder),
+            FileName = misultin_utility:get_key_value("filename", Attributes),
+            DestFile = DestPath ++ "/" ++ FileName,
+            % save file
+            case file:write_file(DestFile, FileData) of
+                ok ->
+                    Req:respond(200);
+                {error, _Reason} ->
+                    Req:respond(500)
+            end;
+        _ ->
+            Req:respond(500)
+    end;
+
+%% @doc Handle / requests. 
+handle(_, [], _, Req, _) ->
+    Req:redirect("/upload");
 
 %% @doc Handle GET requests by input Url
 %% Respone body types: [plain/html].
