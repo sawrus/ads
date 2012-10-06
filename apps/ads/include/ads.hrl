@@ -32,3 +32,4 @@
 % Another parameters
 -define(STAT_SEPARATOR, ":").
 -define(HTML_SEPARATOR, "$$$").
+-define(REQ_DEF, "=1&").
