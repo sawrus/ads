@@ -136,6 +136,21 @@ handle('GET', ["upload"], _, Req, _) -> Req:ok([{"Content-Type", "text/html"}],
     </body>
 </html>"]);
 
+% handle a GET on /help action
+handle('GET', ["home"], _, Req, _) -> Req:ok([{"Content-Type", "text/html"}], 
+["<html><head><title>Home</title></head>
+    <body>
+        <ul>
+            <li><a href=\"/ad/json?", string:join(?ADJSON, ?REQ_DEF) ++ ?REQ_DEF, "\">Json configuration</a></li>
+            <li><a href=\"/upload\">File upload</a></li>
+            <li><a href=\"/report/campaign?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">See report of campaign</a></li>
+            <li><a href=\"/stat/clicks?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new click</a></li>
+            <li><a href=\"/stat/downloads?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new download</a></li>
+            <li><a href=\"/stat/impressions?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new impression</a></li>
+        </ul>
+    </body>
+</html>"]);
+
 % handle a POST on / -> file received
 handle('POST', ["upload"], Args, Req, _) ->
     case Args of
@@ -157,7 +172,7 @@ handle('POST', ["upload"], Args, Req, _) ->
 
 %% @doc Handle / requests. 
 handle(_, [], _, Req, _) ->
-    Req:redirect("/upload");
+    Req:redirect("/home");
 
 %% @doc Handle GET requests by input Url
 %% Respone body types: [plain/html].
