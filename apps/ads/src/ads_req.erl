@@ -100,7 +100,6 @@ handle_adjson(Args, Req, Conn) ->
     end.
 
 handle('GET', ["ad", RespType], Args, Req, Conn) ->
-    ?LOG_DEBUG("AD; RespType=~p", [RespType]),
     case RespType of
         "json" -> handle_adjson(Args, Req, Conn);
         _ -> Req:respond(400)

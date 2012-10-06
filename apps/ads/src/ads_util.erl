@@ -45,10 +45,10 @@ validate([{A, _} | T1], [E | T2]) ->
 %% @doc Getting modification time in seconds of defined File
 %% Usage:
 %% ads_util:get_mtime(File)
-get_mtime(File) ->
-    {ok, FileInfo} = file:read_file_info(File),
+-spec get_mtime(FilePath::string()) -> integer().
+get_mtime(FilePath) ->
+    {ok, FileInfo} = file:read_file_info(FilePath),
     {Date, Time} = FileInfo#file_info.mtime,
     {YYYY,MM,DD} = Date, {HH,Mi,SS} = Time,
     MTime = YYYY + MM + DD + HH + Mi + SS,
     MTime.
-
