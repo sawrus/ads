@@ -12,6 +12,7 @@
 -export([genkey/1, genkey/2]).
 -export([validate/2]).
 -export([get_mtime/1]).
+-export([index_of/2]).
 
 %% Application callbacks
 
@@ -52,3 +53,8 @@ get_mtime(FilePath) ->
     {YYYY,MM,DD} = Date, {HH,Mi,SS} = Time,
     MTime = YYYY + MM + DD + HH + Mi + SS,
     MTime.
+
+index_of(Item, List) -> index_of(Item, List, 1).
+index_of(_, [], _)  -> -1;
+index_of(Item, [Item|_], Index) -> Index;
+index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).

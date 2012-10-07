@@ -23,23 +23,33 @@ handle(Req, Conn) ->
     end,
     Uri = Req:resource([lowercase, urldecode]),
     % Handle request by parameters
-    try
-        handle(Method, Uri, Args, Req, Conn)
-    catch
-        Exception : Reason -> 
-            ETempl = "Exception: ~p~nReason: ~p~nStacktrace: ~p",
-            EList  = [Exception, Reason, erlang:get_stacktrace()],
-            ?LOG_DEBUG(ETempl, EList),
-            Message = io_lib:format(ETempl, EList),
-            Req:respond(500, [{"Content-Type", "text/plain"}], Message)
+    {ok, StatUrls} = application:get_env(stat_urls),
+    {ok, ReportUrls} = application:get_env(report_urls),
+    {ok, ConfigUrl} = application:get_env(config_url),
+    {ok, HomeUrl} = application:get_env(home_url),
+    {ok, UploadUrl} = application:get_env(upload_url),
+    StatIndex = ads_util:index_of(Uri, StatUrls),
+    ReportIndex = ads_util:index_of(Uri, ReportUrls),
+    if 
+        StatIndex > 0 ->
+            calc_stat(StatIndex, Args, Req, Conn);
+        ReportIndex > 0 ->
+            prepare_report(Args, Req, Conn);
+        ConfigUrl == Uri ->
+            prepare_config(Args, Req, Conn);
+        HomeUrl == Uri ->
+            handle_home(Req);
+        [] == Uri ->
+            handle_home(Req);
+        UploadUrl == Uri ->
+            handle_upload(Method, Args, Req);
+        true ->
+            handle(Uri, Req, Conn)        
     end.
 
-
-%%% Respone body types: [application/json].
-
-%% @doc Calculate statistics by request parameters and IncNumber
 calc_stat(IncNumber, Args, Req, Conn) ->
-    ValidateResult = ads_util:validate(Args, ?ADSTAT), 
+    {ok, StatKeys} = application:get_env(stat_keys),
+    ValidateResult = ads_util:validate(Args, StatKeys), 
     if 
         false == ValidateResult -> Req:respond(400); 
         true ->
@@ -47,9 +57,9 @@ calc_stat(IncNumber, Args, Req, Conn) ->
             Req:respond(200)
     end.
 
-%% @doc Prepare statistics report via GET parameters of input request
 prepare_report(Args, Req, Conn) ->
-    ValidateResult = ads_util:validate(Args, ?ADSTAT), 
+    {ok, StatKeys} = application:get_env(stat_keys),
+    ValidateResult = ads_util:validate(Args, StatKeys), 
     if 
         false == ValidateResult -> Req:respond(400); 
         true ->
@@ -60,7 +70,6 @@ prepare_report(Args, Req, Conn) ->
             Req:ok([{"Content-Type", "application/json"}], JSON)
     end.
 
-%% @doc Building configurations of defined applications
 prepare_config(Key) ->
     {H, M, S} = time(),
     Time  = io_lib:format('~2..0b:~2..0b:~2..0b', [H, M, S]),
@@ -73,7 +82,6 @@ prepare_config(Key) ->
     ExtraJson = lists:flatten(lists:reverse(lists:foldl(BuildJSON, [], Extra))),
     ExtraJson.
 
-%% @doc Put file content in NoSQL cache
 save_file(FilePath, Url, Req, Conn) ->
     {ok, BinaryFileContent} = file:read_file(FilePath),
     FileModifiedTime = io_lib:format("~p", [ads_util:get_mtime(FilePath)]),
@@ -81,10 +89,9 @@ save_file(FilePath, Url, Req, Conn) ->
     ads_data:put(Url, string:join([FileModifiedTime, FileContent], ?HTML_SEPARATOR), Conn),
     Req:file(FilePath).
 
-%% @doc Handle GET requests with URI type of '/ad/**'
-%% Respone body types: [application/json].
-handle_adjson(Args, Req, Conn) ->
-    ValidateResult = ads_util:validate(Args, ?ADJSON), 
+prepare_config(Args, Req, Conn) ->
+    {ok, ConfigKeys} = application:get_env(config_keys),
+    ValidateResult = ads_util:validate(Args, ConfigKeys), 
     Key = ads_util:genkey(Args),
     {ok, Value} = ads_data:get(Key, Conn),
     if
@@ -99,84 +106,73 @@ handle_adjson(Args, Req, Conn) ->
             Req:ok([{"Content-Type", "application/json"}], Value)
     end.
 
-handle('GET', ["ad", RespType], Args, Req, Conn) ->
-    case RespType of
-        "json" -> handle_adjson(Args, Req, Conn);
-        _ -> Req:respond(400)
-    end;
-
-
-%% @doc Handle GET requests with URI type of '/report/**'
-%% Respone body type: application/json.
-handle('GET', ["report", RespType], Args, Req, Conn) ->
-    case RespType of
-        "campaign" -> prepare_report(Args, Req, Conn);
-        _ -> Req:respond(400)
-    end;
-
-
-%% @doc Handle GET requests with URI type of '/stat/**'
-%% Respone body type: [plain/text].
-handle('GET', ["stat", RespType], Args, Req, Conn) ->
-    case RespType of
-        "clicks" -> calc_stat(1, Args, Req, Conn);
-        "downloads" -> calc_stat(2, Args, Req, Conn);
-        "impressions" -> calc_stat(3, Args, Req, Conn);
-        _ -> Req:respond(400)
-    end;
-
-% handle a GET on /
-handle('GET', ["upload"], _, Req, _) -> Req:ok([{"Content-Type", "text/html"}], 
-["<html><head><title>File Upload</title></head>
-    <body>
-        <form action=\"/upload\" method=\"POST\" enctype=\"multipart/form-data\">
-            <input type=\"file\" name=\"file\">
-            <input type=\"submit\">
-        </form>
-    </body>
-</html>"]);
-
-% handle a GET on /help action
-handle('GET', ["home"], _, Req, _) -> Req:ok([{"Content-Type", "text/html"}], 
+build_hrefs([], _, _) -> "";
+build_hrefs([H | T], Keys, Def) ->
+    build_href(H, Keys, Def) ++ build_hrefs(T, Keys, Def).
+    
+build_href(Url, Keys, Def) ->
+    Href = "/" ++ 
+        string:join(Url, "/") ++ "?" ++ 
+        string:join(Keys, "=" ++ Def ++ "&") ++ "=" ++ Def,
+    "<li><a href=\""++ Href ++ "\">" ++ Href ++ "</a></li>".
+     
+handle_home(Req) ->
+    {ok, StatUrls} = application:get_env(stat_urls),
+    {ok, StatKeys} = application:get_env(stat_keys),
+    {ok, ReportUrls} = application:get_env(report_urls),
+    {ok, ConfigUrl} = application:get_env(config_url),
+    {ok, ConfigKeys} = application:get_env(config_keys),
+    {ok, HomeUrl} = application:get_env(home_url),
+    {ok, UploadUrl} = application:get_env(upload_url),
+    StatDef = io_lib:format("~p", [random:uniform(51) + 24]),
+    ConfigDef = io_lib:format("~p", [random:uniform(75) + 51]),
+    ReportHref = build_hrefs(ReportUrls, StatKeys, StatDef),
+    StatHref = build_hrefs(StatUrls, StatKeys, StatDef),
+    ConfigHref = "/" ++ string:join(ConfigUrl, "/") ++ "?" ++ string:join(ConfigKeys, "="++ConfigDef++"&") ++ "="++ ConfigDef,
+    HomeHref = "/" ++ string:join(HomeUrl, "/"),
+    UploadHref = "/" ++ string:join(UploadUrl, "/"),
+    Req:ok([{"Content-Type", "text/html"}], 
 ["<html><head><title>Home</title></head>
     <body>
         <ul>
-            <li><a href=\"/ad/json?", string:join(?ADJSON, ?REQ_DEF) ++ ?REQ_DEF, "\">Json configuration</a></li>
-            <li><a href=\"/upload\">File upload</a></li>
-            <li><a href=\"/report/campaign?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">See report of campaign</a></li>
-            <li><a href=\"/stat/clicks?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new click</a></li>
-            <li><a href=\"/stat/downloads?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new download</a></li>
-            <li><a href=\"/stat/impressions?", string:join(?ADSTAT, ?REQ_DEF) ++ ?REQ_DEF, "\">Make new impression</a></li>
+            ", ReportHref,"
+            ", StatHref,"
+            <li><a href=\"", ConfigHref, "\">", ConfigHref, "</a</li>
+            <li><a href=\"", HomeHref, "\">", HomeHref, "</a</li>
+            <li><a href=\"", UploadHref, "\">", UploadHref, "</a</li>
         </ul>
     </body>
-</html>"]);
+</html>"]).
 
-% handle a POST on / -> file received
-handle('POST', ["upload"], Args, Req, _) ->
-    case Args of
-        [{_Tag, Attributes, FileData}] ->
-            % build destination file path
-            {ok, DestPath} = application:get_env(http_folder),
-            FileName = misultin_utility:get_key_value("filename", Attributes),
-            DestFile = DestPath ++ "/" ++ FileName,
-            % save file
-            case file:write_file(DestFile, FileData) of
-                ok ->
-                    Req:file(DestFile);
-                {error, _Reason} ->
-                    Req:respond(500)
-            end;
-        _ ->
-            Req:respond(500)
-    end;
+handle_upload(Method, Args, Req) ->
+    if 
+        'GET' == Method ->
+            Req:ok([{"Content-Type", "text/html"}], 
+                ["<html><head><title>File Upload</title></head><body>
+                  <form action=\"/upload\" method=\"POST\" enctype=\"multipart/form-data\">
+                  <input type=\"file\" name=\"file\">
+                  <input type=\"submit\">
+                  </form></body></html>"]);
+        true ->
+        case Args of
+            [{_Tag, Attributes, FileData}] ->
+                % build destination file path
+                {ok, DestPath} = application:get_env(http_folder),
+                FileName = misultin_utility:get_key_value("filename", Attributes),
+                DestFile = DestPath ++ "/" ++ FileName,
+                % save file
+                case file:write_file(DestFile, FileData) of
+                    ok ->
+                        Req:file(DestFile);
+                    {error, _Reason} ->
+                        Req:respond(500)
+                end;
+            _ ->
+                Req:respond(500)
+        end
+    end.
 
-%% @doc Handle / requests. 
-handle(_, [], _, Req, _) ->
-    Req:redirect("/home");
-
-%% @doc Handle GET requests by input Url
-%% Respone body types: [plain/html].
-handle('GET', Url, _, Req, Conn) ->
+handle(Url, Req, Conn) ->
     {ok, Folder} = application:get_env(http_folder),
     FilePath = Folder ++ "/" ++ Url,
     {ok, BinaryFileContent} = ads_data:get(Url, Conn),
@@ -195,9 +191,5 @@ handle('GET', Url, _, Req, Conn) ->
                 true ->
                     Req:ok([{"Content-Type", "text/html"}], FileContent)
             end
-    end;
+    end.
 
-%% @doc Handle any other requests
-handle(_, _, _, Req, _) ->
-    Req:respond(404).
-  

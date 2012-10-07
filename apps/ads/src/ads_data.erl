@@ -41,11 +41,16 @@ inc_stat(Stat, IncNumber, IncValue) ->
     [lists:nth(IncNumber, Stat) + IncValue] ++
     lists:nthtail(IncNumber, Stat).
 
+
+init_stat() ->
+    {ok, StatUrls} = application:get_env(stat_urls),
+    lists:duplicate(length(StatUrls), ?STAT_NIL).
+    
 get_stat(Key, Conn) ->
     {ok, Value} = get(Key, Conn),
     if
         undefined == Value ->
-            Stat = lists:duplicate(?STAT_SIZE, ?STAT_NIL);
+            Stat = init_stat();
         true ->
             Stat = binary_to_list(Value)
     end,
@@ -55,7 +60,7 @@ set_stat(StatNumber, Key, Conn) ->
     {ok, Stat} = get(Key, Conn),
     if
         undefined == Stat ->
-            put(Key, lists:duplicate(?STAT_SIZE, ?STAT_NIL), Conn);
+            put(Key, init_stat(), Conn);
         true ->
             NewStat = inc_stat(binary_to_list(Stat), StatNumber),
             put(Key, NewStat, Conn)

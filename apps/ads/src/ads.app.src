@@ -14,9 +14,28 @@
   {mod, { ads_app, []}},
   {registered, []},
   {env, [
-	{http_port, 7777},
+	{http_port, 8080},
 	{http_folder, "/ads/static"},
-	{http_compress, true}
+	{http_compress, true},
+	{https_enable, false},
+	{https_options, [
+        {certfile, "/ads/priv/ads_certificate.pem"},
+        {keyfile, "/ads/priv/ads_privkey.pem"},
+        {password, "adspassword"}
+    ]},
+    {config_url, ["ad","json"]},
+    {config_keys, ["Platform", "Version"]},
+    {stat_urls, [
+        ["stat","clicks"], 
+        ["stat","downloads"], 
+        ["stat","impressions"] 
+    ]},
+    {stat_keys, ["Campaign", "Customer"]},
+    {report_urls, [
+        ["report","campaign"]
+    ]},
+    {home_url, ["home"]},
+    {upload_url, ["upload"]}
    ]},
   {applications, [kernel, stdlib]}
  ]}.
