@@ -20,16 +20,10 @@
     )
 ).
 
-% Expected parameters (for GET requests)
--define(ADJSON, ["Platform", "Version"]).
--define(ADSTAT, ["Campaign", "Customer"]).
-
 % Initial statistic parameters
--define(STAT_SIZE, 3).
 -define(STAT_NIL, 0).
 -define(STAT_INC, 1).
 
 % Another parameters
 -define(STAT_SEPARATOR, ":").
 -define(HTML_SEPARATOR, "$$$").
--define(REQ_DEF, "=1&").
