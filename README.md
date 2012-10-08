@@ -1,7 +1,6 @@
 # ADS
 
 ADS is an HTTP(S) server which calculate and stores statistics data. 
-This server builded on misultin modules and eredis as NoSQL engine.
 
 https://github.com/sawrus/ads
 
@@ -12,9 +11,7 @@ https://github.com/sawrus/ads
  * OOB support to work in SSL mode
  * Ability to Extend and change statistics data via env variables (inflight changes)
  * Ability to upload files with any format (power on cache mode for html files)
- * If cached html file was changed ie size was changed then this file will be put in NoSQL cache server for calculate and store statistics data.
-
-# Quick Start
+ * If cached html file was changed ie size was changed then this file will be put in NoSQL cache# Quick Start
 
 
  The typical 'Hello World" example code is:
@@ -25,6 +22,17 @@ https://github.com/sawrus/ads
 application:start(ads).
 
 ```
+ 
+# Installation notes
+
+  You should make the next steps:
+
+ * Need to install openssl (>= 1.0.1) [OpenSSL](http://www.openssl.org/source/openssl-1.0.1c.tar.gz)
+ * Need to install erlang (>=R14B01)
+ * Need to install redis 
+ * Download the last stable ADS release [ADS](https://github.com/downloads/sawrus/ads/ads_v0.1.tar.gz)
+ * Unzip archive: tar -xzf ads_vMj.Mi.tar.gz
+ * Run it: As daemon via (./bin/ads start) or As console via (/bin/ads console)
 
 # Module Exports
 
@@ -32,7 +40,7 @@ The complete list of module exports can be found [here](https://github.com/ostin
 
 # Dependencies
 
-You will need:
+ You will need:
 
  * [Erlang](http://www.erlang.org/download.html) >= R14B01
  * [Rebar](https://github.com/basho/rebar) to compile
