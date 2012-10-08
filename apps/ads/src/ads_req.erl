@@ -177,9 +177,12 @@ handle(Url, Req, Conn) ->
     FilePath = Folder ++ "/" ++ Url,
     {ok, BinaryFileContent} = ads_data:get(Url, Conn),
     FileExist = filelib:is_file(FilePath), 
+    HtmlFile = lists:suffix(".html", FilePath),
     if
         false == FileExist ->
             Req:respond(404);
+        false == HtmlFile ->
+            Req:file(FilePath);
         undefined == BinaryFileContent->
             save_file(FilePath, Url, Req, Conn);
         true ->                            
