@@ -1,19 +1,7 @@
-***
-***
-***
-***
-
-Ad server which calculate and stores statistics data.
-This server builded on misultin modules and eredis as NoSQL engine.
-
-***
-***
-***
-***
-
 # ADS
 
 ADS is an HTTP(S) server which calculate and stores statistics data. 
+This server builded on misultin modules and eredis as NoSQL engine.
 
 https://github.com/sawrus/ads
 
