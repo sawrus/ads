@@ -87,7 +87,7 @@ save_file(FilePath, Url, Req, Conn) ->
     FileModifiedTime = io_lib:format("~p", [ads_util:get_mtime(FilePath)]),
     FileContent = binary_to_list(BinaryFileContent),
     ads_data:put(Url, string:join([FileModifiedTime, FileContent], ?HTML_SEPARATOR), Conn),
-    Req:file(FilePath).
+    Req:ok([{"Content-Type", "text/html"}], ads_util:build_page(string:tokens(FileContent, ?HTML_SEPARATOR), Conn)).
 
 prepare_config(Args, Req, Conn) ->
     {ok, ConfigKeys} = application:get_env(config_keys),
@@ -114,7 +114,7 @@ build_href(Url, Keys, Def) ->
     Href = "/" ++ 
         string:join(Url, "/") ++ "?" ++ 
         string:join(Keys, "=" ++ Def ++ "&") ++ "=" ++ Def,
-    "<li><a href=\""++ Href ++ "\">" ++ Href ++ "</a></li>".
+    "<li><a href=\""++ Href ++ "\">" ++ Href ++ "</a></li>\n".
      
 handle_home(Req) ->
     {ok, StatUrls} = application:get_env(stat_urls),
@@ -122,27 +122,16 @@ handle_home(Req) ->
     {ok, ReportUrls} = application:get_env(report_urls),
     {ok, ConfigUrl} = application:get_env(config_url),
     {ok, ConfigKeys} = application:get_env(config_keys),
-    {ok, HomeUrl} = application:get_env(home_url),
     {ok, UploadUrl} = application:get_env(upload_url),
     StatDef = io_lib:format("~p", [random:uniform(51) + 24]),
     ConfigDef = io_lib:format("~p", [random:uniform(75) + 51]),
     ReportHref = build_hrefs(ReportUrls, StatKeys, StatDef),
     StatHref = build_hrefs(StatUrls, StatKeys, StatDef),
-    ConfigHref = "/" ++ string:join(ConfigUrl, "/") ++ "?" ++ string:join(ConfigKeys, "="++ConfigDef++"&") ++ "="++ ConfigDef,
-    HomeHref = "/" ++ string:join(HomeUrl, "/"),
+    ConfigHref = build_href(ConfigUrl, ConfigKeys, ConfigDef),
     UploadHref = "/" ++ string:join(UploadUrl, "/"),
     Req:ok([{"Content-Type", "text/html"}], 
-["<html><head><title>Home</title></head>
-    <body>
-        <ul>
-            ", ReportHref,"
-            ", StatHref,"
-            <li><a href=\"", ConfigHref, "\">", ConfigHref, "</a</li>
-            <li><a href=\"", HomeHref, "\">", HomeHref, "</a</li>
-            <li><a href=\"", UploadHref, "\">", UploadHref, "</a</li>
-        </ul>
-    </body>
-</html>"]).
+["<ul>\n", ReportHref, "\n", StatHref, "\n", ConfigHref,"\n
+  <li><a href=\"", UploadHref, "\">", UploadHref, "</a</li></ul>"]).
 
 handle_upload(Method, Args, Req) ->
     if 
@@ -174,8 +163,9 @@ handle_upload(Method, Args, Req) ->
 
 handle(Url, Req, Conn) ->
     {ok, Folder} = application:get_env(http_folder),
-    FilePath = Folder ++ "/" ++ Url,
-    {ok, BinaryFileContent} = ads_data:get(Url, Conn),
+    FullUrl = filename:join(Url),
+    FilePath = filename:join([Folder, FullUrl]),
+    {ok, BinaryFileContent} = ads_data:get(FullUrl, Conn),
     FileExist = filelib:is_file(FilePath), 
     HtmlFile = lists:suffix(".html", FilePath),
     if
@@ -184,15 +174,15 @@ handle(Url, Req, Conn) ->
         false == HtmlFile ->
             Req:file(FilePath);
         undefined == BinaryFileContent->
-            save_file(FilePath, Url, Req, Conn);
+            save_file(FilePath, FullUrl, Req, Conn);
         true ->                            
             ActualModifiedTime = integer_to_list(ads_util:get_mtime(FilePath)),
-            [CachedModifiedTime, FileContent] = string:tokens(binary_to_list(BinaryFileContent), ?HTML_SEPARATOR),
+            [CachedModifiedTime | FileContent] = string:tokens(binary_to_list(BinaryFileContent), ?HTML_SEPARATOR),
             if 
                 ActualModifiedTime =/= CachedModifiedTime  ->
-                    save_file(FilePath, Url, Req, Conn);
+                    save_file(FilePath, FullUrl, Req, Conn);
                 true ->
-                    Req:ok([{"Content-Type", "text/html"}], FileContent)
+                    Req:ok([{"Content-Type", "text/html"}], ads_util:build_page(FileContent, Conn))
             end
     end.
 

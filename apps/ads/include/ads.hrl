@@ -26,4 +26,4 @@
 
 % Another parameters
 -define(STAT_SEPARATOR, ":").
--define(HTML_SEPARATOR, "$$$").
+-define(HTML_SEPARATOR, "%%%").

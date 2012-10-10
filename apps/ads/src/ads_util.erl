@@ -13,6 +13,8 @@
 -export([validate/2]).
 -export([get_mtime/1]).
 -export([index_of/2]).
+-export([sub/3, gsub/3]).
+-export([build_page/2, get_page/2]).
 
 %% Application callbacks
 
@@ -58,3 +60,56 @@ index_of(Item, List) -> index_of(Item, List, 1).
 index_of(_, [], _)  -> -1;
 index_of(Item, [Item|_], Index) -> Index;
 index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).
+
+-spec sub(Str::string, Old::string(), New::string()) -> string().
+sub(Str, Old, New) ->
+    RegExp = "\\Q"++Old++"\\E",
+    re:replace(Str,RegExp,New,[multiline, {return, list}]).
+
+-spec gsub(Str::string, Old::string(), New::string()) -> string().
+gsub(Str, Old, New) ->
+    RegExp = "\\Q"++Old++"\\E",
+    re:replace(Str,RegExp,New,[global, multiline, {return, list}]).
+
+save_file(FilePath, Url, Conn) ->
+     {ok, BinaryFileContent} = file:read_file(FilePath),
+     FileModifiedTime = io_lib:format("~p", [ads_util:get_mtime(FilePath)]),
+     FileContent = binary_to_list(BinaryFileContent),
+     ads_data:put(Url, string:join([FileModifiedTime, FileContent], ?HTML_SEPARATOR), Conn),
+     get_page(Url, Conn).
+     
+get_page("", _) -> "";
+get_page(PageName, Conn) ->
+    {ok, Folder} = application:get_env(http_folder),
+    FilePath = filename:join([Folder, PageName]),
+    FileExist = filelib:is_file(FilePath),
+    Result = ads_data:get(PageName, Conn),
+    if 
+        false == FileExist -> PageName;
+        true ->
+        case Result of 
+            {ok, undefined} -> 
+                save_file(FilePath, PageName, Conn);
+            {ok, BinaryFileContent} -> 
+                ActualModifiedTime = integer_to_list(ads_util:get_mtime(FilePath)),
+                [CachedModifiedTime | FileContent] = string:tokens(binary_to_list(BinaryFileContent), ?HTML_SEPARATOR),
+                if 
+                    ActualModifiedTime =/= CachedModifiedTime ->
+                        save_file(FilePath, PageName, Conn);
+                    true ->
+                        build_page(FileContent, Conn)
+                end;
+            _ -> PageName
+        end
+    end.
+
+build_page([], _) -> "";
+build_page([PagePart | T], Conn) ->
+    IsHtmlPart = lists:suffix(".html", PagePart),
+    if 
+        false == IsHtmlPart ->
+            Result = PagePart;
+        true ->
+            Result = get_page(PagePart, Conn)
+    end,
+    Result ++ build_page(T, Conn).
